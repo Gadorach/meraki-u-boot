@@ -1,0 +1,8 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/dts-v1/;
+#include "meraki_jaguar1.dtsi"
+
+/ {
+	model = "Cisco Meraki MS320-24 family";
+	compatible = "meraki,ms320-24", "mscc,jaguar1";
+};

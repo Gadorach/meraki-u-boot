@@ -25,8 +25,12 @@ struct mscc_bb_priv {
 	u32 clk2;			/* Clock value 2nd phase */
 };
 
-/* Delay 24 instructions for this particular application */
-#define hold_time_delay() mscc_vcoreiii_nop_delay(3)
+static inline void mscc_bb_spi_write(struct mscc_bb_priv *priv, u32 value)
+{
+	writel(value, priv->regs);
+	sync();
+	mscc_vcoreiii_nop_delay(8);
+}
 
 static int mscc_bb_spi_cs_activate(struct mscc_bb_priv *priv, int mode, int cs)
 {
@@ -63,7 +67,7 @@ static int mscc_bb_spi_cs_activate(struct mscc_bb_priv *priv, int mode, int cs)
 		priv->svalue |= cs_value;
 
 		/* Enable the CS in HW, Initial clock value */
-		writel(priv->svalue | priv->clk2, priv->regs);
+		mscc_bb_spi_write(priv, priv->svalue | priv->clk2);
 
 		priv->cs_active = true;
 		debug("Activated CS%d\n", priv->cs_num);
@@ -81,19 +85,18 @@ static int mscc_bb_spi_cs_deactivate(struct mscc_bb_priv *priv, int deact_delay)
 		u32 value = readl(priv->regs);
 
 		value &= ~ICPU_SW_MODE_SW_SPI_CS_M;
-		writel(value, priv->regs);
-		hold_time_delay();
+		mscc_bb_spi_write(priv, value);
 
 		/* Stop driving the clock, but keep CS with nCS == 1 */
 		value &= ~ICPU_SW_MODE_SW_SPI_SCK_OE;
-		writel(value, priv->regs);
+		mscc_bb_spi_write(priv, value);
 
 		/* Deselect hold time delay */
 		if (deact_delay)
 			udelay(deact_delay);
 
 		/* Drop everything */
-		writel(0, priv->regs);
+		mscc_bb_spi_write(priv, 0);
 
 		priv->cs_active = false;
 		debug("Deactivated CS%d\n", priv->cs_num);
@@ -145,23 +148,10 @@ int mscc_bb_spi_xfer(struct udevice *dev, unsigned int bitlen,
 			 * on this edge for us to be sampled at the
 			 * end of this loop.
 			 */
-			writel(value | priv->clk1, priv->regs);
-
-			/* Wait for t_setup. All devices do have a
-			 * setup-time, so we always insert some delay
-			 * here. Some devices have a very long
-			 * setup-time, which can be adjusted by the
-			 * user through vcoreiii_device->delay.
-			 */
-			hold_time_delay();
+			mscc_bb_spi_write(priv, value | priv->clk1);
 
 			/* Drive the clock high. */
-			writel(value | priv->clk2, priv->regs);
-
-			/* Wait for t_hold. See comment about t_setup
-			 * above.
-			 */
-			hold_time_delay();
+			mscc_bb_spi_write(priv, value | priv->clk2);
 
 			/* We sample as close to the next falling edge
 			 * as possible.
@@ -207,6 +197,7 @@ static const struct dm_spi_ops mscc_bb_ops = {
 
 static const struct udevice_id mscc_bb_ids[] = {
 	{ .compatible = "mscc,luton-bb-spi" },
+	{ .compatible = "mscc,jaguar1-bb-spi" },
 	{ }
 };
 

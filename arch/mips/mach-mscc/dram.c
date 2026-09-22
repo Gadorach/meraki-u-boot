@@ -14,7 +14,12 @@
 
 DECLARE_GLOBAL_DATA_PTR;
 
-static inline int vcoreiii_train_bytelane(void)
+#ifdef CONFIG_SOC_JAGUAR1
+static __always_inline
+#else
+static inline
+#endif
+int vcoreiii_train_bytelane(void)
 {
 	int ret;
 
@@ -34,6 +39,21 @@ int vcoreiii_ddr_init(void)
 {
 	register int res;
 
+#ifdef CONFIG_SOC_JAGUAR1
+	/*
+	 * Jaguar1's released loader retrains only while reset boot mode is
+	 * active and retries indefinitely after a PHY FIFO reset.
+	 */
+	if (readl(BASE_CFG + ICPU_GENERAL_CTRL) &
+	    ICPU_GENERAL_CTRL_BOOT_MODE_ENA) {
+		hal_vcoreiii_init_memctl();
+		hal_vcoreiii_wait_memctl();
+		while (vcoreiii_train_bytelane() != DDR_TRAIN_OK || dram_check())
+			hal_vcoreiii_ddr_failed();
+		hal_vcoreiii_ddr_verified();
+	}
+	res = 0;
+#else
 	if (!(readl(BASE_CFG + ICPU_MEMCTRL_STAT)
 	      & ICPU_MEMCTRL_STAT_INIT_DONE)) {
 		hal_vcoreiii_init_memctl();
@@ -47,6 +67,7 @@ int vcoreiii_ddr_init(void)
 		hal_vcoreiii_ddr_verified();
 	else
 		hal_vcoreiii_ddr_failed();
+#endif
 
 	/*  Remap DDR to kuseg: Clear boot-mode */
 	clrbits_le32(BASE_CFG + ICPU_GENERAL_CTRL,

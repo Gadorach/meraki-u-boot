@@ -9,7 +9,7 @@
     .set noreorder
     .extern     vcoreiii_tlb_init
     .extern     vcoreiii_ddr_init
-#ifdef CONFIG_SOC_LUTON
+#if defined(CONFIG_SOC_LUTON) || defined(CONFIG_SOC_JAGUAR1)
     .extern     pll_init
 #endif
 
@@ -28,7 +28,18 @@ LEAF(lowlevel_init)
 	jal	vcoreiii_tlb_init
 	 nop
 
-#ifdef CONFIG_SOC_LUTON
+#ifdef CONFIG_SOC_JAGUAR1
+	/* Unlock and disable a watchdog armed by ROM or a previous stage. */
+	li	t0, 0x70000200
+	li	t1, 0xbe
+	sw	t1, 0(t0)
+	li	t1, 0xef
+	sw	t1, 0(t0)
+	sw	zero, 0(t0)
+	sync
+#endif
+
+#if defined(CONFIG_SOC_LUTON) || defined(CONFIG_SOC_JAGUAR1)
 	jal	pll_init
 	 nop
 #endif

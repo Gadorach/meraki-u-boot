@@ -1,0 +1,63 @@
+# SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+
+if SOC_JAGUAR1
+
+config SYS_VENDOR
+	default "meraki"
+
+config SYS_BOARD
+	default "jaguar1"
+
+choice
+	prompt "Cisco Meraki Jaguar1 board"
+	default TARGET_MERAKI_MS42P
+	help
+	  Select the board topology explicitly; secondary-ASIC detection is not
+	  reliable enough to identify a model during cold boot.
+
+config TARGET_MERAKI_MS42P
+	bool "MS42/MS42P"
+	help
+	  Build for the MS42 or MS42P using the shared polled Ethernet path on
+	  master-Jaguar physical port 2.
+
+config TARGET_MERAKI_MS220_48
+	bool "MS220-48 family"
+	help
+	  Build for an MS220-48-family switch with a secondary Jaguar1 ASIC and
+	  the shared master-Jaguar physical-port-2 Ethernet path.
+
+config TARGET_MERAKI_MS320_24
+	bool "MS320-24 family"
+	help
+	  Build for a single-ASIC MS320-24-family switch with the shared
+	  master-Jaguar physical-port-2 Ethernet path.
+
+config TARGET_MERAKI_MS320_48
+	bool "MS320-48 family"
+	help
+	  Build for an MS320-48-family switch with a secondary Jaguar1 ASIC and
+	  the shared master-Jaguar physical-port-2 Ethernet path.
+
+endchoice
+
+config MERAKI_JAGUAR1_DUAL
+	bool
+	default y if TARGET_MERAKI_MS42P || TARGET_MERAKI_MS220_48 || TARGET_MERAKI_MS320_48
+
+config MERAKI_JAGUAR1_MODEL
+	string
+	default "MS42/MS42P" if TARGET_MERAKI_MS42P
+	default "MS220-48" if TARGET_MERAKI_MS220_48
+	default "MS320-24" if TARGET_MERAKI_MS320_24
+	default "MS320-48" if TARGET_MERAKI_MS320_48
+
+config MERAKI_JAGUAR1_EARLY_SWITCH_INIT
+	bool "Initialize the secondary switch ASIC before the U-Boot prompt"
+	help
+	  Probe the secondary ASIC over PI and initialize its SGPIO controller
+	  during board_early_init_r(). Local GPIO, PHY fan control, and SGPIO are
+	  initialized regardless so cooling and safe LED defaults are established.
+	  Leave this disabled until the secondary-ASIC path is proven.
+
+endif

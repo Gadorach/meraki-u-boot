@@ -1,0 +1,8 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/dts-v1/;
+#include "meraki_jaguar1.dtsi"
+
+/ {
+	model = "Cisco Meraki MS42/MS42P";
+	compatible = "meraki,ms42p", "meraki,ms42", "mscc,jaguar1";
+};

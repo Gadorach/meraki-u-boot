@@ -37,6 +37,14 @@ config MSCC_SERVAL_SWITCH
 	help
 	  This driver supports the Serval network switch device.
 
+config MERAKI_JAGUAR1_BOOTNET
+	bool "Meraki Jaguar1 boot Ethernet"
+	depends on ARCH_MSCC && DM_ETH && OF_CONTROL
+	help
+	  Enable the shared, polled Ethernet path used by Meraki Jaguar1 boards.
+	  It owns master-Jaguar physical port 2 and does not configure the slave
+	  Jaguar, VStaX, or FDMA.
+
 config MSCC_FELIX_SWITCH
 	bool "Felix switch driver"
 	depends on DM_DSA

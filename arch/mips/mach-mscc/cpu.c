@@ -48,9 +48,14 @@ void vcoreiii_tlb_init(void)
 	 */
 	create_tlb(tlbix++, MSCC_IO_ORIGIN1_OFFSET, SZ_16M, MMU_REGIO_RW,
 		   MMU_REGIO_RW);
-#ifdef CONFIG_SOC_LUTON
+#if defined(CONFIG_SOC_LUTON) || defined(CONFIG_SOC_JAGUAR1)
 	create_tlb(tlbix++, MSCC_IO_ORIGIN2_OFFSET, SZ_16M, MMU_REGIO_RW,
 		   MMU_REGIO_RW);
+#endif
+#ifdef CONFIG_SOC_JAGUAR1
+	/* PI CS3 exposes the optional second Jaguar1. */
+	create_tlb(tlbix++, MSCC_JAGUAR1_PI_CS3_TO, SZ_16M,
+		   MMU_REGIO_RW, MMU_REGIO_RW);
 #endif
 
 	/*
@@ -86,6 +91,11 @@ int mach_cpu_init(void)
 	writel(ICPU_SPI_MST_CFG_FAST_READ_ENA +
 	       ICPU_SPI_MST_CFG_CS_DESELECT_TIME(0x19) +
 	       ICPU_SPI_MST_CFG_CLK_DIV(9), BASE_CFG + ICPU_SPI_MST_CFG);
+#elif defined(CONFIG_SOC_JAGUAR1)
+	/* Source-released Jaguar1 loader timing: fast-read, 0x19, divider 8. */
+	writel(ICPU_SPI_MST_CFG_FAST_READ_ENA +
+	       ICPU_SPI_MST_CFG_CS_DESELECT_TIME(0x19) +
+	       ICPU_SPI_MST_CFG_CLK_DIV(8), BASE_CFG + ICPU_SPI_MST_CFG);
 #else
 #if defined(CONFIG_SOC_OCELOT) || defined(CONFIG_SOC_SERVAL)
 	writel(ICPU_SPI_MST_CFG_CS_DESELECT_TIME(0x19) +

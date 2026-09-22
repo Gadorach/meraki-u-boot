@@ -131,6 +131,28 @@
 #define VC3_MPAR_tDLLK            512
 #define VC3_MPAR_tWR              5
 
+#elif defined(CONFIG_DDRTYPE_MT47H64M16)	/* Jaguar1 Meraki boards */
+
+/* Micron 1Gb MT47H64M16-3, 8Meg x 16 x 8 banks, DDR2-533 @ 4.80ns */
+#define VC3_MPAR_bank_addr_cnt    3
+#define VC3_MPAR_row_addr_cnt     13
+#define VC3_MPAR_col_addr_cnt     10
+#define VC3_MPAR_tREFI            1625
+#define VC3_MPAR_tRAS_min         9
+#define VC3_MPAR_CL               4
+#define VC3_MPAR_tWTR             2
+#define VC3_MPAR_tRC              12
+#define VC3_MPAR_tFAW             11
+#define VC3_MPAR_tRP              4
+#define VC3_MPAR_tRRD             3
+#define VC3_MPAR_tRCD             4
+#define VC3_MPAR_tRPA             4
+#define VC3_MPAR_tMRD             2
+#define VC3_MPAR_tRFC             27
+#define VC3_MPAR__400_ns_dly      84
+#define VC3_MPAR_tWR              4
+#undef MIPS_VCOREIII_MEMORY_DDR3
+
 #elif defined(CONFIG_DDRTYPE_MT47H128M8HQ)	/* Luton10/26 Refboards */
 
 /* Micron 1Gb MT47H128M8-3 16Meg x 8 x 8 banks, DDR-533@CL4 @ 4.80ns */
@@ -164,7 +186,8 @@
 #endif
 
 #if defined(CONFIG_SOC_OCELOT) || defined(CONFIG_SOC_JR2) || \
-	defined(CONFIG_SOC_SERVALT) || defined(CONFIG_SOC_SERVAL)
+	defined(CONFIG_SOC_SERVALT) || defined(CONFIG_SOC_SERVAL) || \
+	defined(CONFIG_SOC_JAGUAR1)
 #define MIPS_VCOREIII_MEMORY_16BIT 1
 #endif
 
@@ -210,8 +233,13 @@
 #define MSCC_MEMPARM_MR0 \
 	(VC3_MPAR_BURST_LENGTH == 8 ? 3 : 2) | (VC3_MPAR_CL << 4) | \
 	((VC3_MPAR_tWR - 1) << 9)
-/* DLL-on, Full-OD, AL=0, RTT=off, nDQS-on, RDQS-off, out-en */
+#ifdef CONFIG_SOC_JAGUAR1
+/* DLL on, full drive, 150-ohm RTT, nDQS on, outputs enabled. */
+#define MSCC_MEMPARM_MR1 0x3c2
+#else
+/* DLL on, full drive, AL=0, RTT off, nDQS on, outputs enabled. */
 #define MSCC_MEMPARM_MR1 0x382
+#endif
 #define MSCC_MEMPARM_MR2 0
 #define MSCC_MEMPARM_MR3 0
 #else
@@ -231,6 +259,15 @@
 #define MSCC_MEMPARM_MR3 0
 #endif				/* MIPS_VCOREIII_MEMORY_DDR3 */
 
+#ifdef CONFIG_SOC_JAGUAR1
+/* Jaguar1's DDR2 controller is intrinsically 16-bit and has no width bit. */
+#define MSCC_MEMPARM_MEMCFG						\
+	(VC3_MPAR_BURST_SIZE ? ICPU_MEMCTRL_CFG_BURST_SIZE : 0) | \
+	(VC3_MPAR_BURST_LENGTH == 8 ? ICPU_MEMCTRL_CFG_BURST_LEN : 0) | \
+	(VC3_MPAR_bank_addr_cnt == 3 ? ICPU_MEMCTRL_CFG_BANK_CNT : 0) | \
+	ICPU_MEMCTRL_CFG_MSB_ROW_ADDR(VC3_MPAR_row_addr_cnt - 1) | \
+	ICPU_MEMCTRL_CFG_MSB_COL_ADDR(VC3_MPAR_col_addr_cnt - 1)
+#else
 #define MSCC_MEMPARM_MEMCFG                                             \
 	((MIPS_VCOREIII_DDR_SIZE > SZ_512M) ?				\
 	 ICPU_MEMCTRL_CFG_DDR_512MBYTE_PLUS : 0) |			\
@@ -241,6 +278,7 @@
 	(VC3_MPAR_bank_addr_cnt == 3 ? ICPU_MEMCTRL_CFG_BANK_CNT : 0) | \
 	ICPU_MEMCTRL_CFG_MSB_ROW_ADDR(VC3_MPAR_row_addr_cnt - 1) |	\
 	ICPU_MEMCTRL_CFG_MSB_COL_ADDR(VC3_MPAR_col_addr_cnt - 1)
+#endif
 
 #if defined(CONFIG_SOC_OCELOT) || defined(CONFIG_SOC_JR2) || \
 	defined(CONFIG_SOC_SERVALT) || defined(CONFIG_SOC_SERVAL)
@@ -313,10 +351,18 @@
 	ICPU_MEMCTRL_TIMING2_REF_DLY(VC3_MPAR_tRFC - 1) |		\
 	ICPU_MEMCTRL_TIMING2_FOUR_HUNDRED_NS_DLY(VC3_MPAR__400_ns_dly)
 
+#ifdef CONFIG_SOC_JAGUAR1
+/* ODT timings used by the source-released Jaguar1 loader. */
+#define MSCC_MEMPARM_TIMING3						\
+	ICPU_MEMCTRL_TIMING3_WR_TO_RD_CS_CHANGE_DLY(VC3_MPAR_CL - 1) | \
+	ICPU_MEMCTRL_TIMING3_ODT_WR_DLY(VC3_MPAR_CL - 3) | \
+	ICPU_MEMCTRL_TIMING3_LOCAL_ODT_RD_DLY(VC3_MPAR_CL - 1)
+#else
 #define MSCC_MEMPARM_TIMING3						\
 	ICPU_MEMCTRL_TIMING3_WR_TO_RD_CS_CHANGE_DLY(VC3_MPAR_CL - 1) |	\
 	ICPU_MEMCTRL_TIMING3_ODT_WR_DLY(VC3_MPAR_CL - 1) |		\
 	ICPU_MEMCTRL_TIMING3_LOCAL_ODT_RD_DLY(VC3_MPAR_CL - 1)
+#endif
 
 #endif
 
@@ -333,7 +379,12 @@ enum {
 #define PAUSE() asm volatile("nop; nop; nop; nop; nop; nop; nop; nop")
 
 /* NB: Assumes inlining as no stack is available! */
-static inline void set_dly(u32 bytelane, u32 dly)
+#ifdef CONFIG_SOC_JAGUAR1
+static __always_inline
+#else
+static inline
+#endif
+void set_dly(u32 bytelane, u32 dly)
 {
 	register u32 r = readl(BASE_CFG + ICPU_MEMCTRL_DQS_DLY(bytelane));
 
@@ -382,7 +433,120 @@ static inline void memphy_soft_reset(void)
 	PAUSE();
 }
 
-#if defined(CONFIG_SOC_OCELOT) || defined(CONFIG_SOC_JR2) || \
+#if defined(CONFIG_SOC_JAGUAR1)
+static __always_inline void sleep_100ns(u32 val)
+{
+}
+
+static __always_inline
+void hal_vcoreiii_ddr_reset_assert(void)
+{
+	/* Reset boot mode already holds the Jaguar1 memory subsystem reset. */
+}
+
+static __always_inline
+void hal_vcoreiii_ddr_failed(void)
+{
+	register u32 cfg = readl(BASE_CFG + ICPU_MEMPHY_CFG);
+
+	writel(cfg | ICPU_MEMPHY_CFG_PHY_FIFO_RST,
+	       BASE_CFG + ICPU_MEMPHY_CFG);
+	writel(cfg & ~ICPU_MEMPHY_CFG_PHY_FIFO_RST,
+	       BASE_CFG + ICPU_MEMPHY_CFG);
+}
+
+static __always_inline
+void hal_vcoreiii_ddr_verified(void)
+{
+}
+
+static __always_inline
+bool jaguar1_adjust_dly(u32 bytelane, int adjust)
+{
+	register u32 r = readl(BASE_CFG + ICPU_MEMCTRL_DQS_DLY(bytelane));
+	register u32 dly = ICPU_MEMCTRL_DQS_DLY_DQS_DLY(r) + adjust;
+
+	if (dly < 31) {
+		r &= ~ICPU_MEMCTRL_DQS_DLY_DQS_DLY_M;
+		writel(r | ICPU_MEMCTRL_DQS_DLY_DQS_DLY(dly),
+		       BASE_CFG + ICPU_MEMCTRL_DQS_DLY(bytelane));
+		return true;
+	}
+	return false;
+}
+
+static __always_inline
+int jaguar1_look_for_and_incr(u8 data)
+{
+	register u8 b0 = __raw_readb((void __iomem *)MSCC_DDR_TO);
+	register u8 b1 = __raw_readb((void __iomem *)(MSCC_DDR_TO + 1));
+
+	if (b0 != data && !jaguar1_adjust_dly(0, 1))
+		return DDR_TRAIN_ERROR;
+	if (b1 != data && !jaguar1_adjust_dly(1, 1))
+		return DDR_TRAIN_ERROR;
+	return b0 == data && b1 == data ? DDR_TRAIN_OK : DDR_TRAIN_CONTINUE;
+}
+
+static __always_inline
+int hal_vcoreiii_train_bytelane(u32 bytelane)
+{
+	register int res;
+
+	(void)bytelane;
+	__raw_writel(0x0000ffff, (void __iomem *)MSCC_DDR_TO);
+	__raw_writel(0x00000000, (void __iomem *)(MSCC_DDR_TO + 4));
+	set_dly(0, 0);
+	set_dly(1, 0);
+
+	while ((res = jaguar1_look_for_and_incr(0xff)) == DDR_TRAIN_CONTINUE)
+		;
+	if (res != DDR_TRAIN_OK)
+		return res;
+	while ((res = jaguar1_look_for_and_incr(0x00)) == DDR_TRAIN_CONTINUE)
+		;
+	if (res != DDR_TRAIN_OK)
+		return res;
+
+	jaguar1_adjust_dly(0, -3);
+	jaguar1_adjust_dly(1, -3);
+	return DDR_TRAIN_OK;
+}
+
+static __always_inline int hal_vcoreiii_init_dqs(void)
+{
+	return 0;
+}
+
+static __always_inline int dram_check(void)
+{
+	register u32 offset;
+	register u32 pattern;
+
+	/* Exercise address and data lines across all RAM before enabling a stack. */
+	for (offset = 0; offset < SZ_128M; offset += SZ_4K) {
+		pattern = 0x5aa55aa5 ^ offset;
+		__raw_writel(pattern, (void __iomem *)(MSCC_DDR_TO + offset));
+	}
+	/* Complete the first pattern writes before validating them. */
+	mb();
+	for (offset = 0; offset < SZ_128M; offset += SZ_4K) {
+		pattern = 0x5aa55aa5 ^ offset;
+		if (__raw_readl((void __iomem *)(MSCC_DDR_TO + offset)) != pattern)
+			return 1;
+		__raw_writel(~pattern, (void __iomem *)(MSCC_DDR_TO + offset));
+	}
+	/* Complete the inverted pattern writes before validating them. */
+	mb();
+	for (offset = 0; offset < SZ_128M; offset += SZ_4K) {
+		pattern = ~(0x5aa55aa5 ^ offset);
+		if (__raw_readl((void __iomem *)(MSCC_DDR_TO + offset)) != pattern)
+			return 1;
+	}
+	return 0;
+}
+
+#elif defined(CONFIG_SOC_OCELOT) || defined(CONFIG_SOC_JR2) || \
 	defined(CONFIG_SOC_SERVALT) || defined(CONFIG_SOC_SERVAL)
 static u8 training_data[] = { 0xfe, 0x11, 0x33, 0x55, 0x77, 0x99, 0xbb, 0xdd };
 
@@ -738,7 +902,12 @@ static inline int dram_check(void)
  * NB: Called *early* to init memory controller - assumes inlining as
  * no stack is available!
  */
-static inline void hal_vcoreiii_init_memctl(void)
+#ifdef CONFIG_SOC_JAGUAR1
+static __always_inline
+#else
+static inline
+#endif
+void hal_vcoreiii_init_memctl(void)
 {
 	/* Ensure DDR is in reset */
 	hal_vcoreiii_ddr_reset_assert();
@@ -812,6 +981,9 @@ static inline void hal_vcoreiii_init_memctl(void)
 #elif defined(CONFIG_SOC_JR2) || defined(CONFIG_SOC_SERVALT)
 	writel(ICPU_MEMCTRL_TERMRES_CTRL_ODT_WR_ENA(3),
 	       BASE_CFG + ICPU_MEMCTRL_TERMRES_CTRL);
+#elif defined(CONFIG_SOC_JAGUAR1)
+	writel(ICPU_MEMCTRL_TERMRES_CTRL_ODT_WR_ENA,
+	       BASE_CFG + ICPU_MEMCTRL_TERMRES_CTRL);
 #else				/* Luton */
 	/* Termination setup - disable ODT */
 	writel(0, BASE_CFG + ICPU_MEMCTRL_TERMRES_CTRL);
@@ -819,7 +991,12 @@ static inline void hal_vcoreiii_init_memctl(void)
 #endif
 }
 
-static inline void hal_vcoreiii_wait_memctl(void)
+#ifdef CONFIG_SOC_JAGUAR1
+static __always_inline
+#else
+static inline
+#endif
+void hal_vcoreiii_wait_memctl(void)
 {
 	/* Now, rip it! */
 	writel(ICPU_MEMCTRL_CTRL_INITIALIZE, BASE_CFG + ICPU_MEMCTRL_CTRL);
@@ -843,7 +1020,10 @@ static inline void hal_vcoreiii_wait_memctl(void)
 	__raw_writel(0xccccbbbb, ((void __iomem *)MSCC_DDR_TO + 0x18));
 	__raw_writel(0xeeeedddd, ((void __iomem *)MSCC_DDR_TO + 0x1C));
 #else
+	/* Jaguar1 establishes its two-lane pattern in the training routine. */
+#ifndef CONFIG_SOC_JAGUAR1
 	__raw_writel(0xff, ((void __iomem *)MSCC_DDR_TO));
+#endif
 #endif
 }
 #endif				/* __ASM_MACH_DDR_H */

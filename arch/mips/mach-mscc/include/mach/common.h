@@ -16,6 +16,11 @@
 #include <mach/luton/luton_devcpu_gcb.h>
 #include <mach/luton/luton_devcpu_gcb_miim_regs.h>
 #include <mach/luton/luton_icpu_cfg.h>
+#elif defined(CONFIG_SOC_JAGUAR1)
+#include <mach/jaguar1/jaguar1.h>
+#include <mach/jaguar1/jaguar1_devcpu_gcb.h>
+#include <mach/jaguar1/jaguar1_devcpu_gcb_miim_regs.h>
+#include <mach/jaguar1/jaguar1_icpu_cfg.h>
 #elif defined(CONFIG_SOC_JR2)
 #include <mach/jr2/jr2.h>
 #include <mach/jr2/jr2_devcpu_gcb.h>

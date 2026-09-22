@@ -135,6 +135,10 @@ void trap_restore(void)
 
 int arch_initr_trap(void)
 {
+	/* Jaguar1 retains the exception vectors provided by its NOR image. */
+	if (IS_ENABLED(CONFIG_SOC_JAGUAR1))
+		return 0;
+
 	trap_init(CFG_SYS_SDRAM_BASE);
 
 	return 0;

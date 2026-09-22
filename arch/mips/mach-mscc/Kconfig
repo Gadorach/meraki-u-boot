@@ -32,6 +32,14 @@ config SOC_LUTON
 	help
 	  This supports MSCC Luton family of SOCs.
 
+config SOC_JAGUAR1
+	bool "Jaguar1 SOC Family"
+	select SOC_VCOREIII
+	select MSCC_BB_SPI
+	help
+	  This supports the VSC7460/VSC7434 Jaguar1 family of SOCs using
+	  the source-released VCore-III cold-boot initialization sequence.
+
 config SOC_JR2
 	bool "Jaguar2 SOC Family"
 	select SOC_VCOREIII
@@ -79,11 +87,16 @@ config DDRTYPE_MT41K128M16JT
 config DDRTYPE_MT47H128M8HQ
 	bool "Micron MT47H128M8-3 (1Gbit, DDR-533@CL4 @ 4.80ns 16Mbisx8x8)"
 
+config DDRTYPE_MT47H64M16
+	bool "Micron MT47H64M16-3 (1Gbit, DDR2-533, 8Mbitx16x8)"
+
 endchoice
 
 source "board/mscc/ocelot/Kconfig"
 
 source "board/mscc/luton/Kconfig"
+
+source "board/meraki/jaguar1/Kconfig"
 
 source "board/mscc/jr2/Kconfig"
 

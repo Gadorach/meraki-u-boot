@@ -1,0 +1,79 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+
+/ {
+	#address-cells = <1>;
+	#size-cells = <1>;
+	compatible = "mscc,jaguar1";
+
+	cpus {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		cpu@0 {
+			compatible = "mips,mips24KEc";
+			device_type = "cpu";
+			reg = <0>;
+		};
+	};
+
+	ahb_clk: ahb-clk {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <208333333>;
+	};
+
+	ahb {
+		compatible = "simple-bus";
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges = <0 0x60000000 0x10200000>;
+
+		uart0: serial@10100000 {
+			compatible = "ns16550a";
+			reg = <0x10100000 0x20>;
+			clocks = <&ahb_clk>;
+			reg-io-width = <4>;
+			reg-shift = <2>;
+			status = "disabled";
+		};
+
+		spi0: spi@10000068 {
+			compatible = "mscc,jaguar1-bb-spi";
+			reg = <0x10000068 0x4>;
+			num-chipselects = <1>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "disabled";
+		};
+
+		mdio0: mdio@100a0 {
+			compatible = "mscc,jaguar1-miim";
+			reg = <0x100a0 0x24>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "disabled";
+		};
+
+		mdio1: mdio@100c4 {
+			compatible = "mscc,jaguar1-miim";
+			reg = <0x100c4 0x24>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "disabled";
+		};
+
+		mdio2: mdio@100e8 {
+			compatible = "mscc,jaguar1-miim";
+			reg = <0x100e8 0x24>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "disabled";
+		};
+
+		jaguar1_eth: ethernet@0 {
+			compatible = "meraki,jaguar1-bootnet";
+			reg = <0 0x1000000>;
+			status = "disabled";
+		};
+	};
+};
