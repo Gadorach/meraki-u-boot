@@ -772,11 +772,12 @@ static void jr_dev1g_init(void)
 static int jr_port_activate(void)
 {
 	jr_detail = 0x500u;
-	if (jr_read(JR_XTR_GRP_CFG) != 5u ||
-	    jr_read(JR_DEV1G_BASE) != 0x00201111u ||
-	    jr_read(JR_DEV1G_BASE + 0x0du) != 0u)
+	if (jr_read(JR_XTR_GRP_CFG) != 5u)
 		return -EIO;
 	jr_dev1g_init();
+	if (jr_read(JR_DEV1G_BASE) != 0x00200000u ||
+	    jr_read(JR_DEV1G_BASE + 0x0du) != 0x11u)
+		return -EIO;
 	return jr_phy_activate();
 }
 

@@ -1,14 +1,18 @@
 // SPDX-License-Identifier: GPL-2.0+
 /* Shared board support for Cisco Meraki Jaguar1 switches. */
 #include <config.h>
+#include <cpu_func.h>
 #include <env.h>
+#include <fdt_support.h>
 #include <init.h>
 #include <net.h>
+#include <string.h>
 #include <asm/global_data.h>
 #include <asm/io.h>
 #include <linux/bitops.h>
 #include <linux/delay.h>
 #include <linux/errno.h>
+#include <meraki_jaguar1_stage2.h>
 #include <mach/common.h>
 
 DECLARE_GLOBAL_DATA_PTR;
@@ -35,6 +39,10 @@ DECLARE_GLOBAL_DATA_PTR;
 #define I2C_DELAY_US		5
 
 static bool slave_present;
+static bool board_mac_trusted;
+static u8 board_mac[ETH_ALEN];
+
+int meraki_jaguar1_stage1_boot(void);
 
 void board_debug_uart_init(void)
 {
@@ -260,13 +268,68 @@ out_stop:
 int board_late_init(void)
 {
 	u8 mac[ETH_ALEN], current[ETH_ALEN];
+	volatile u32 *handoff =
+		(volatile u32 *)(uintptr_t)MERAKI_JAGUAR1_HANDOFF_ADDR;
 
-	if (!eth_env_get_enetaddr("ethaddr", current) &&
-	    !board_eeprom_read(BOARD_MAC_OFFSET, mac, sizeof(mac)) &&
-	    is_valid_ethaddr(mac))
-		eth_env_set_enetaddr("ethaddr", mac);
+	if (IS_ENABLED(CONFIG_MERAKI_JAGUAR1_STAGE1))
+		return meraki_jaguar1_stage1_boot();
+	if (IS_ENABLED(CONFIG_MERAKI_JAGUAR1_STAGE2)) {
+		u32 recovery_magic = *handoff;
+
+		*handoff = 0;
+		flush_cache(MERAKI_JAGUAR1_HANDOFF_ADDR, sizeof(*handoff));
+		if (recovery_magic == MERAKI_JAGUAR1_RECOVERY_MAGIC) {
+			puts("Stage1 requested NOR recovery\n");
+			env_set("recovery_requested", "1");
+		}
+	}
+
+	board_mac_trusted = false;
+	if (eth_env_get_enetaddr("ethaddr", current)) {
+		memcpy(board_mac, current, sizeof(board_mac));
+		board_mac_trusted = true;
+	} else if (!board_eeprom_read(BOARD_MAC_OFFSET, mac, sizeof(mac)) &&
+		   is_valid_ethaddr(mac)) {
+		if (!eth_env_set_enetaddr("ethaddr", mac)) {
+			memcpy(board_mac, mac, sizeof(board_mac));
+			board_mac_trusted = true;
+		}
+	} else if (IS_ENABLED(CONFIG_TARGET_MERAKI_MS42P)) {
+		puts("MS42P: board EEPROM MAC unavailable\n");
+	}
 	return 0;
 }
+
+#if CONFIG_IS_ENABLED(OF_BOARD_SETUP) && CONFIG_IS_ENABLED(MERAKI_JAGUAR1_STAGE2)
+int ft_board_setup(void *blob, struct bd_info *bd)
+{
+	u8 mac[ETH_ALEN];
+	int node, ret;
+
+	(void)bd;
+	/* Only the MS42P FIFO netdev owns this property. Leave recovery DTs
+	 * and other Jaguar1 board families alone.
+	 */
+	if (!IS_ENABLED(CONFIG_TARGET_MERAKI_MS42P))
+		return 0;
+	node = fdt_path_offset(blob, "/ahb@60000000/switch@0");
+	if (node == -FDT_ERR_NOTFOUND)
+		return 0;
+	if (node < 0)
+		return node;
+	if (!board_mac_trusted ||
+	    !eth_env_get_enetaddr("ethaddr", mac) ||
+	    memcmp(mac, board_mac, sizeof(mac))) {
+		puts("MS42P: no pre-network validated MAC for Linux switch handoff\n");
+		return 0;
+	}
+	ret = fdt_setprop(blob, node, "local-mac-address", mac, sizeof(mac));
+	if (ret)
+		printf("MS42P: Linux switch MAC handoff failed: %s\n",
+		       fdt_strerror(ret));
+	return ret;
+}
+#endif
 
 int checkboard(void)
 {

@@ -27,15 +27,31 @@
 #error Unknown DDR size - please add!
 #endif
 
-#ifdef CONFIG_SOC_JAGUAR1
+#ifdef CONFIG_MERAKI_JAGUAR1_STAGE2
 #define CFG_EXTRA_ENV_SETTINGS					\
-	"loadaddr=0x81000000\0"					\
+	"loadaddr=0x82000000\0"					\
+	"fit_addr_r=0x82000000\0"				\
 	"console=ttyS0,115200\0"					\
 	"bootargs_extra=\0"						\
-	"setup=setenv bootargs console=${console} ${bootargs_extra}\0"	\
-	"netboot=run setup; tftpboot ${loadaddr} ${bootfile}; "		\
-		"bootm ${loadaddr}\0"					\
+	"setup_recovery=setenv bootargs console=${console} "		\
+		"${bootargs_extra}\0"					\
+	"setup_production=setenv bootargs console=${console} ubi.mtd=ubi " \
+		"ubi.block=0,rootfs root=/dev/ubiblock0_1 "		\
+		"rootfstype=squashfs ro rootwait ${bootargs_extra}\0"	\
+	"netboot=run setup_recovery && tftpboot ${fit_addr_r} ${bootfile} && " \
+		"bootm ${fit_addr_r}\0"				\
+	"recovery_off=0x1e0000\0"					\
+	"recovery_size=0xe20000\0"				\
+	"nor_recovery=sf probe && sf read ${fit_addr_r} ${recovery_off} " \
+		"${recovery_size} && run setup_recovery && "		\
+		"bootm ${fit_addr_r}\0"				\
+	"nand_boot=ubi part ubi && ubi check kernel && ubi check rootfs && " \
+		"ubi read ${fit_addr_r} kernel && iminfo ${fit_addr_r} && " \
+		"run setup_production && bootm ${fit_addr_r}\0"		\
+	"recovery_requested=0\0"					\
 	""
+#elif defined(CONFIG_SOC_JAGUAR1)
+#define CFG_EXTRA_ENV_SETTINGS ""
 #else
 #define CFG_EXTRA_ENV_SETTINGS					\
 	"loadaddr=0x81000000\0"						\

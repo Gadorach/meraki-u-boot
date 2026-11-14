@@ -52,6 +52,25 @@ config MERAKI_JAGUAR1_MODEL
 	default "MS320-24" if TARGET_MERAKI_MS320_24
 	default "MS320-48" if TARGET_MERAKI_MS320_48
 
+config MERAKI_JAGUAR1_BOARD_ID
+	hex
+	default 0x00000001 if TARGET_MERAKI_MS42P
+	default 0x00000002 if TARGET_MERAKI_MS220_48
+	default 0x00000003 if TARGET_MERAKI_MS320_24
+	default 0x00000004 if TARGET_MERAKI_MS320_48
+	help
+	  Stable board identifier embedded in and validated against each stage2
+	  slot header. This prevents a valid image for another Jaguar1 platform
+	  from being selected.
+
+config MERAKI_JAGUAR1_RESET_BUTTON_GPIO
+	int
+	default 13 if TARGET_MERAKI_MS42P
+	default -1
+	help
+	  Primary Jaguar1 GPIO connected to the active-low reset button. Leave this
+	  at -1 when the platform assignment has not been confirmed.
+
 config MERAKI_JAGUAR1_EARLY_SWITCH_INIT
 	bool "Initialize the secondary switch ASIC before the U-Boot prompt"
 	help
@@ -59,5 +78,39 @@ config MERAKI_JAGUAR1_EARLY_SWITCH_INIT
 	  during board_early_init_r(). Local GPIO, PHY fan control, and SGPIO are
 	  initialized regardless so cooling and safe LED defaults are established.
 	  Leave this disabled until the secondary-ASIC path is proven.
+
+choice
+	prompt "Jaguar1 boot stage"
+	default MERAKI_JAGUAR1_STAGE1
+
+config MERAKI_JAGUAR1_STAGE1
+	bool "Build the NOR-resident stage1"
+	help
+	  Build the minimal reset image which initializes DDR, validates both
+	  redundant stage2 slots, and loads the newest valid generation.
+
+config MERAKI_JAGUAR1_STAGE2
+	bool "Build the DDR-resident full U-Boot stage2"
+	select MIPS_MACH_EARLY_INIT
+	select SKIP_LOWLEVEL_INIT
+	help
+	  Build a full U-Boot image which stage1 loads into initialized DDR. Stage2
+	  owns networking, persistent environment, verified Linux boot, and storage
+	  policy. It must not be written into the 256 KiB reset-vector partition.
+
+endchoice
+
+config MERAKI_MS42P_NAND
+	bool
+	default y if TARGET_MERAKI_MS42P && MERAKI_JAGUAR1_STAGE2
+	select BCH
+	select MTD
+	select MTD_PARTITIONS
+	select MTD_RAW_NAND
+	select NAND_ECC_BCH
+	select SYS_NAND_SELF_INIT
+	help
+	  Enable the MS42/MS42P Micron parallel NAND on Jaguar1 PI chip select 1.
+	  NAND is deliberately absent from stage1 and the other Jaguar1 targets.
 
 endif

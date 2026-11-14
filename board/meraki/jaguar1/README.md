@@ -8,8 +8,15 @@ identifier.
 
 The port initializes the Jaguar1 PLL, 128 MiB x16 DDR2, UART, mapped SPI NOR,
 the optional PI-CS3 secondary ASIC, copper-PHY reset, SGPIO LEDs, and the board
-EEPROM base MAC. It deliberately has no persistent U-Boot environment because
-no flash sector is proven unowned across all supported stock layouts.
+EEPROM base MAC. The small reset-vector **stage1** has no persistent U-Boot
+environment; the DDR-resident MS42P **stage2** uses separate redundant
+environment sectors at NOR `0x1c0000`/`0x1d0000`. Stage2 generation 9
+passes a **pre-network validated** per-board `ethaddr` into an OpenVTSS
+Linux FDT node before booting, without writing the environment during
+normal startup. Board B's EEPROM fallback was unavailable on target; a
+subsequently generated random U-Boot network MAC is not passed to Linux. This
+does not make the original stage1 layout or other Jaguar1 board families
+interchangeable.
 
 All four targets use the same polled master-Jaguar physical-port-2 path (chip
 port/PHY 1), DHCP/TFTP commands, and network initialization lifecycle. The

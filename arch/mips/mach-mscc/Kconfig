@@ -35,7 +35,7 @@ config SOC_LUTON
 config SOC_JAGUAR1
 	bool "Jaguar1 SOC Family"
 	select SOC_VCOREIII
-	select MSCC_BB_SPI
+	select MSCC_BB_SPI if SPI
 	help
 	  This supports the VSC7460/VSC7434 Jaguar1 family of SOCs using
 	  the source-released VCore-III cold-boot initialization sequence.
